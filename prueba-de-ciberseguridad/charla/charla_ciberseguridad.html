@@ -1,0 +1,1035 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cómo piensa un atacante</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<style>
+/* ============================================================
+   PLAN DE DISEÑO
+   Capa: "expediente de amenazas" — cada ataque es un caso de
+   investigación (número de caso, campo "qué rompe", diagrama de
+   evidencia). Fondo tinta nocturna, ámbar de sello/evidencia como
+   acento de alerta, cian de defensa para criptografía y retos.
+   Tipos: Space Grotesk (titulares/sellos), Inter (cuerpo),
+   JetBrains Mono (datos, claves, texto cifrado).
+   Layout: MAZO DE DIAPOSITIVAS — una pantalla fija dividida en
+   franjas (marca arriba, escenario central, barra de navegación
+   abajo); cada diapositiva ocupa el escenario completo y se
+   cambia con botones, teclado o deslizar, nunca con scroll de
+   página.
+   ============================================================ */
+:root{
+  --bg:#f3f1ec;
+  --paper:#ffffff;
+  --paper-2:#eceade;
+  --ink:#1b1a16;
+  --ink-soft:#56534a;
+  --ink-faint:#8c8777;
+  --line:#dcd8cb;
+  --line-strong:#c7c1ac;
+  --amber:#a8661a;
+  --amber-ink:#7a4810;
+  --amber-bg:#f3e2c6;
+  --cyan:#0f7a84;
+  --cyan-ink:#0b5962;
+  --cyan-bg:#d9eceb;
+  --danger:#9c2f2f;
+  --danger-bg:#f1dcd6;
+  --good:#2f7a4f;
+  --good-bg:#dcecde;
+  --accent:var(--amber);
+  --shadow:0 1px 2px rgba(27,26,22,.06), 0 10px 28px rgba(27,26,22,.08);
+  --sans:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --head:"Space Grotesk",var(--sans);
+  --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f0f0d; --paper:#181814; --paper-2:#1f1f19;
+    --ink:#f1efe6; --ink-soft:#bcb8a8; --ink-faint:#7d7868;
+    --line:#333026; --line-strong:#464132;
+    --amber:#e3a455; --amber-ink:#f6cf9a; --amber-bg:#3a2c16;
+    --cyan:#5fc9d1; --cyan-ink:#aee7ea; --cyan-bg:#163233;
+    --danger:#e08787; --danger-bg:#3a2020;
+    --good:#7fd19b; --good-bg:#1c3326;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.5);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f0f0d; --paper:#181814; --paper-2:#1f1f19;
+  --ink:#f1efe6; --ink-soft:#bcb8a8; --ink-faint:#7d7868;
+  --line:#333026; --line-strong:#464132;
+  --amber:#e3a455; --amber-ink:#f6cf9a; --amber-bg:#3a2c16;
+  --cyan:#5fc9d1; --cyan-ink:#aee7ea; --cyan-bg:#163233;
+  --danger:#e08787; --danger-bg:#3a2020;
+  --good:#7fd19b; --good-bg:#1c3326;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.5);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box;}
+[hidden]{display:none !important;}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);}
+html{font-size:clamp(16px, min(1.25vw, 2.2vh), 26px);}
+html,body{height:100%;margin:0;}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--sans); line-height:1.5;
+  -webkit-font-smoothing:antialiased; display:flex; flex-direction:column; overflow:hidden;
+}
+::selection{background:color-mix(in srgb, var(--amber) 35%, transparent);}
+
+.gutter{
+  padding-left:max(16px, env(safe-area-inset-left,0px));
+  padding-right:max(16px, env(safe-area-inset-right,0px));
+}
+h1,h2,h3{font-family:var(--head);letter-spacing:-.01em;text-wrap:balance;margin:0;}
+code,.mono{font-family:var(--mono);}
+a{color:var(--amber-ink);}
+
+/* ---------- marca (arriba) ---------- */
+.topbar{flex:none;background:var(--paper);border-bottom:1px solid var(--line);}
+.topbar-in{
+  max-width:56rem;margin:0 auto;display:flex;align-items:center;gap:10px;padding-block:9px;
+}
+.brand-mini{
+  font-family:var(--head);font-weight:700;font-size:.84rem;white-space:nowrap;color:var(--ink);
+  display:flex;align-items:center;gap:7px;
+}
+.brand-mini .sq{width:9px;height:9px;background:var(--amber);border-radius:2px;flex:none;}
+.progresstrack{flex:1 1 auto;height:4px;background:var(--paper-2);border-radius:99px;overflow:hidden;min-width:40px;}
+.progressfill{height:100%;background:var(--amber);border-radius:99px;width:0%;}
+.slidekicker-top{
+  font-family:var(--mono);font-size:.7rem;color:var(--ink-faint);white-space:nowrap;flex:none;
+}
+
+/* ---------- escenario de diapositivas ---------- */
+.deck{flex:1 1 auto;min-height:0;position:relative;overflow:hidden;}
+.slide{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  overflow-y:auto;overflow-x:hidden;
+}
+.slide-inner{width:100%;max-width:56rem;margin:auto;padding-block:1.6rem;}
+
+/* ---------- divisores de parte ---------- */
+.slide.divider{text-align:center;}
+.divider .slide-inner{max-width:39rem;padding-block:0;}
+.divider .bignum{
+  font-family:var(--mono);font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--amber-ink);background:var(--amber-bg);display:inline-block;padding:5px 12px;
+  border-radius:999px;
+}
+.divider h2{font-size:clamp(1.9rem,1.3rem + 2.6vw,2.7rem);margin-top:14px;}
+.divider p{color:var(--ink-soft);font-size:1.05rem;margin-top:12px;}
+.divider hr{border:none;border-top:2px solid var(--line-strong);width:64px;margin:20px auto 0;}
+.divider .playrule{
+  margin-top:22px;border:1px solid var(--line);border-radius:12px;background:var(--paper);
+  box-shadow:var(--shadow);padding:14px 16px;text-align:left;font-size:.92rem;color:var(--ink-soft);
+}
+.divider .playrule b{color:var(--ink);}
+
+/* ---------- portada ---------- */
+.hero{text-align:left;}
+.eyebrow{
+  font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--amber-ink);display:inline-flex;align-items:center;gap:8px;
+}
+.eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--amber);
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--amber) 22%, transparent);}
+.hero h1{font-size:clamp(2rem,1.2rem + 3.6vw,3.4rem);font-weight:650;margin-top:10px;}
+.hero .lede{color:var(--ink-soft);font-size:1.1rem;max-width:58ch;margin-top:14px;}
+.hero .advance{
+  margin-top:26px;font-family:var(--mono);font-size:.82rem;color:var(--ink-faint);
+  display:flex;align-items:center;gap:7px;
+}
+
+/* ---------- agenda ---------- */
+.agenda-kicker{font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);}
+.agenda-title{font-size:clamp(1.5rem,1.1rem + 1.6vw,2.1rem);margin-top:6px;}
+.timeline{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px;}
+.tpill{
+  display:flex;align-items:baseline;gap:7px;background:var(--paper);border:1px solid var(--line);
+  border-radius:10px;padding:9px 13px;font-size:.88rem;color:var(--ink-soft);box-shadow:var(--shadow);
+}
+.tpill b{font-family:var(--mono);color:var(--ink);font-weight:700;font-size:.84rem;}
+.agenda-split{display:flex;gap:12px;margin-top:18px;flex-wrap:wrap;}
+.agenda-chip{flex:1 1 240px;border-radius:12px;padding:14px 16px;font-size:.92rem;}
+.agenda-chip.a{background:var(--amber-bg);color:var(--amber-ink);}
+.agenda-chip.b{background:var(--cyan-bg);color:var(--cyan-ink);}
+.agenda-chip b{display:block;font-family:var(--head);font-size:1rem;margin-bottom:3px;}
+
+/* ---------- encabezado de diapositiva normal ---------- */
+.kicker{font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);}
+
+/* ---------- tarjetas de caso ---------- */
+.case-top{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-top:6px;}
+.case-icon{flex:none;width:3.1rem;height:3.1rem;}
+.case-id{font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;color:var(--ink-faint);}
+.case-title{font-size:clamp(1.2rem,1rem + 1vw,1.6rem);margin-top:3px;}
+.case-tag{
+  margin-left:auto;align-self:center;font-family:var(--mono);font-size:.7rem;letter-spacing:.04em;
+  padding:5px 10px;border-radius:999px;white-space:nowrap;background:var(--danger-bg);color:var(--danger);
+}
+.case-body{margin-top:16px;display:grid;gap:16px;grid-template-columns:1fr;}
+@media (min-width:680px){.case-body{grid-template-columns:1.3fr 1fr;}}
+.case-body .min0{min-width:0;}
+.case-what p{color:var(--ink-soft);font-size:.96rem;}
+.case-what .quote{
+  margin-top:10px;border-left:3px solid var(--line-strong);padding-left:12px;
+  font-size:.9rem;color:var(--ink-faint);font-style:italic;
+}
+.case-aside{
+  border:1px solid var(--line);border-radius:12px;background:var(--paper);box-shadow:var(--shadow);
+  padding:14px 16px;
+}
+.case-aside h4{
+  font-family:var(--mono);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-faint);margin-bottom:8px;
+}
+.case-aside ul{margin:0 0 14px;padding-left:18px;color:var(--ink-soft);font-size:.88rem;display:flex;flex-direction:column;gap:5px;}
+.case-aside ul:last-child{margin-bottom:0;}
+.case-aside .fix-h{color:var(--good);}
+
+/* ---------- criptografía ---------- */
+.timeline-crypto{display:flex;flex-direction:column;gap:16px;margin-top:18px;}
+.tc-row{display:grid;grid-template-columns:130px 1fr;gap:14px;align-items:start;}
+@media (max-width:560px){.tc-row{grid-template-columns:1fr;gap:4px;}}
+.tc-when{font-family:var(--mono);font-size:.8rem;color:var(--cyan-ink);font-weight:600;padding-top:2px;}
+.tc-what b{display:block;font-family:var(--head);font-size:1.05rem;margin-bottom:3px;}
+.tc-what p{color:var(--ink-soft);font-size:.95rem;}
+
+.principle{
+  border:1px solid var(--line);border-radius:14px;background:var(--cyan-bg);padding:18px 20px;
+  display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;
+}
+.principle svg{flex:none;width:38px;height:38px;}
+.principle p{color:var(--cyan-ink);font-size:1rem;margin:0;max-width:56ch;}
+.principle b{font-family:var(--head);}
+
+.flow{display:flex;align-items:center;gap:8px;margin-top:22px;flex-wrap:wrap;font-family:var(--mono);font-size:.82rem;}
+.flow .box{border:1px solid var(--line-strong);border-radius:8px;padding:9px 12px;background:var(--paper-2);color:var(--ink);}
+.flow .op{color:var(--ink-faint);}
+
+/* ---------- retos ---------- */
+.reto-top{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-top:6px;}
+.reto-id{font-family:var(--mono);font-size:.72rem;color:var(--ink-faint);}
+.reto-title{font-size:clamp(1.1rem,1rem + .6vw,1.4rem);margin-top:3px;}
+.reto-method{
+  margin-left:auto;align-self:center;font-family:var(--mono);font-size:.7rem;
+  background:var(--cyan-bg);color:var(--cyan-ink);padding:5px 10px;border-radius:999px;white-space:nowrap;
+}
+.ciphertext{
+  margin-top:16px;font-family:var(--mono);font-size:clamp(1.1rem,.9rem + 1.2vw,2rem);letter-spacing:.04em;
+  background:var(--paper-2);border:1px solid var(--line);border-radius:10px;padding:16px;
+  text-align:center;word-break:break-word;color:var(--ink);font-weight:600;
+}
+.hintbox{margin-top:14px;display:flex;flex-direction:column;gap:8px;}
+.hint-line{display:flex;gap:9px;align-items:flex-start;font-size:.89rem;color:var(--ink-soft);}
+.hint-line .flag{flex:none;font-family:var(--mono);font-size:.66rem;color:var(--amber-ink);
+  background:var(--amber-bg);padding:2px 7px;border-radius:999px;margin-top:1px;}
+
+.tool{margin-top:14px;border:1px solid var(--line);border-radius:12px;background:var(--paper-2);padding:12px 14px;}
+.tool summary{
+  cursor:pointer;font-family:var(--head);font-size:.9rem;font-weight:600;color:var(--ink);
+  list-style:none;display:flex;align-items:center;gap:8px;
+}
+.tool summary::before{content:"▸";color:var(--ink-faint);font-size:.8rem;}
+.tool[open] summary::before{content:"▾";}
+.tool-body{padding-top:10px;}
+.tool-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:9px;}
+.tool-row label{font-family:var(--mono);font-size:.76rem;color:var(--ink-soft);white-space:nowrap;}
+input[type="range"]{flex:1 1 140px;min-width:100px;}
+input[type="text"]{
+  font-family:var(--mono);font-size:.88rem;padding:7px 9px;border:1px solid var(--line-strong);
+  border-radius:8px;background:var(--paper);color:var(--ink);min-width:0;flex:1 1 160px;
+}
+input[type="text"]:focus,input[type="range"]:focus{outline:2px solid var(--amber);outline-offset:1px;}
+.shiftval{font-family:var(--mono);font-weight:700;color:var(--amber-ink);min-width:2.2em;text-align:right;}
+.live-out{
+  font-family:var(--mono);font-size:.94rem;background:var(--paper);border:1px solid var(--line);
+  border-radius:8px;padding:9px 11px;min-height:1.5em;color:var(--ink-soft);word-break:break-word;
+}
+
+.answer{margin-top:14px;border-top:1px dashed var(--line);padding-top:14px;}
+.answer-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.btn{
+  font-family:var(--sans);font-size:.88rem;font-weight:600;cursor:pointer;border-radius:10px;
+  padding:8px 15px;border:1px solid var(--line-strong);background:var(--paper);color:var(--ink);flex:none;
+}
+.btn:hover{border-color:var(--amber);}
+.btn.primary{background:var(--amber);border-color:var(--amber);color:#fff;}
+:root[data-theme="dark"] .btn.primary,:root:not([data-theme="light"]) .btn.primary{color:#241a08;}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .btn.primary{color:#fff;}}
+.feedback{margin-top:9px;font-size:.88rem;border-radius:10px;padding:9px 11px;display:none;}
+.feedback.show{display:block;}
+.feedback.ok{background:var(--good-bg);color:var(--good);}
+.feedback.bad{background:var(--danger-bg);color:var(--danger);}
+.feedback.wait{background:var(--paper-2);color:var(--ink-faint);}
+
+/* ---------- candado ---------- */
+.slide.lockslide{text-align:center;}
+.lockslide .slide-inner{max-width:26rem;padding-block:0;}
+.lockslide svg{width:2.6rem;height:2.6rem;margin:0 auto 12px;display:block;}
+.lockslide h2{font-size:1.3rem;}
+.lockslide p{color:var(--ink-soft);font-size:.95rem;max-width:44ch;margin:10px auto 18px;}
+.lock-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+input[type="password"]{
+  font-family:var(--mono);font-size:1.05rem;letter-spacing:.3em;text-align:center;
+  padding:9px 10px 9px 16px;border:1px solid var(--line-strong);border-radius:8px;
+  background:var(--paper-2);color:var(--ink);width:6.5em;
+}
+input[type="password"]:focus{outline:2px solid var(--amber);outline-offset:1px;}
+.lock-feedback{margin-top:12px;font-size:.86rem;min-height:1.2em;}
+.lock-feedback.bad{color:var(--danger);}
+.lock-feedback.ok{color:var(--good);}
+
+/* ---------- práctica ---------- */
+.practice{
+  border:1px solid var(--amber);border-radius:16px;background:var(--amber-bg);padding:24px;
+  box-shadow:var(--shadow);margin-top:18px;
+}
+.practice h2{color:var(--amber-ink);font-size:1.25rem;}
+.practice p{color:var(--amber-ink);font-size:.96rem;max-width:58ch;}
+.cmdbox{
+  margin-top:14px;display:flex;gap:8px;align-items:center;background:var(--ink);border-radius:10px;
+  padding:12px 14px;flex-wrap:wrap;
+}
+.cmdbox code{color:#f1efe6;font-size:.88rem;flex:1 1 auto;min-width:0;overflow-x:auto;white-space:pre;}
+.copy-btn{
+  font-family:var(--mono);font-size:.76rem;color:#f1efe6;background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.2);border-radius:7px;padding:6px 10px;cursor:pointer;flex:none;
+}
+.copy-btn:hover{background:rgba(255,255,255,.16);}
+.practice-notes{display:flex;flex-direction:column;gap:6px;margin-top:14px;font-size:.88rem;color:var(--amber-ink);}
+.practice-notes li{list-style:none;padding-left:18px;position:relative;}
+.practice-notes li::before{content:"✓";position:absolute;left:0;font-weight:700;}
+
+/* ---------- barra de navegación (abajo) ---------- */
+.deckbar{flex:none;background:var(--paper);border-top:1px solid var(--line);}
+.deckbar-in{
+  max-width:56rem;margin:0 auto;display:flex;align-items:center;gap:12px;padding-block:10px;
+}
+.navbtn{
+  font-family:var(--sans);font-size:.86rem;font-weight:600;cursor:pointer;border-radius:10px;
+  padding:9px 14px;border:1px solid var(--line-strong);background:var(--paper);color:var(--ink);
+  flex:none;display:flex;align-items:center;gap:6px;
+}
+.navbtn:hover:not(:disabled){border-color:var(--amber);}
+.navbtn:disabled{opacity:.35;cursor:not-allowed;}
+.dots{flex:1 1 auto;display:flex;justify-content:center;gap:6px;overflow-x:auto;scrollbar-width:none;}
+.dots::-webkit-scrollbar{display:none;}
+.dot{
+  width:9px;height:9px;border-radius:50%;background:var(--line-strong);border:none;padding:0;
+  cursor:pointer;flex:none;
+}
+.dot.active{background:var(--amber);width:22px;border-radius:99px;}
+.dot.locked{background:var(--line);cursor:not-allowed;opacity:.5;}
+.counter{font-family:var(--mono);font-size:.76rem;color:var(--ink-faint);white-space:nowrap;flex:none;}
+
+@media (prefers-reduced-motion:reduce){*{transition:none !important;}}
+@media (max-width:480px){
+  .deckbar-in{gap:7px;}
+  .navbtn span.lbl{display:none;}
+}
+</style>
+</head>
+<body>
+<div class="topbar gutter">
+  <div class="topbar-in">
+    <span class="brand-mini"><span class="sq"></span>Expediente de Amenazas</span>
+    <div class="progresstrack"><div class="progressfill" id="progressfill"></div></div>
+    <span class="slidekicker-top" id="topkicker"></span>
+  </div>
+</div>
+
+<div class="deck" id="deck">
+
+  <!-- 0 · PORTADA -->
+  <section class="slide" data-slide>
+    <div class="slide-inner gutter hero">
+      <span class="eyebrow"><span class="dot"></span>Especialización en Ciberseguridad · Charla introductoria</span>
+      <h1>Cómo piensa un atacante</h1>
+      <p class="lede">Tres formas de atacar que seguro te vas a encontrar — explicadas sin tecnicismos —, un poco
+        de historia de la criptografía y dos mensajes cifrados para que los descifres con tu grupo.</p>
+      <p class="advance">→ usa las flechas, haz clic o desliza para avanzar</p>
+    </div>
+  </section>
+
+  <!-- 1 · AGENDA -->
+  <section class="slide" data-slide>
+    <div class="slide-inner gutter">
+      <span class="agenda-kicker">Antes de empezar · 2 horas en total</span>
+      <h2 class="agenda-title">Agenda de hoy</h2>
+      <div class="timeline">
+        <span class="tpill"><b>5'</b>Bienvenida</span>
+        <span class="tpill"><b>10'</b>Caso 1 · MITM</span>
+        <span class="tpill"><b>8'</b>Caso 2 · DoS</span>
+        <span class="tpill"><b>8'</b>Caso 3 · Día cero</span>
+        <span class="tpill"><b>7'</b>Criptografía</span>
+        <span class="tpill"><b>15'</b>Retos en grupo</span>
+        <span class="tpill"><b>7'</b>Cierre</span>
+      </div>
+      <div class="agenda-split">
+        <div class="agenda-chip a"><b>Esta hora · Teoría</b>Todo lo que viene en estas diapositivas. Sin instalar nada.</div>
+        <div class="agenda-chip b"><b>La próxima hora · Práctica</b>Laboratorio en la terminal (última diapositiva).</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · DIVISOR PARTE 1 -->
+  <section class="slide divider" data-slide>
+    <div class="slide-inner gutter">
+      <span class="bignum">Parte 1 · 26 minutos</span>
+      <h2>Tres casos que debes reconocer</h2>
+      <p>No necesitas saber programar para identificarlos. Necesitas saber cómo se sienten cuando te están
+        pasando.</p>
+      <hr>
+    </div>
+  </section>
+
+  <!-- 3 · CASO 1 — MITM -->
+  <section class="slide" data-slide>
+    <div class="slide-inner gutter">
+      <span class="kicker">Parte 1 · Tres casos</span>
+      <div class="case-top">
+        <svg class="case-icon" viewBox="0 0 52 52" aria-hidden="true">
+          <rect x="3" y="20" width="14" height="12" rx="3" fill="none" stroke="var(--ink-soft)" stroke-width="2"></rect>
+          <rect x="35" y="20" width="14" height="12" rx="3" fill="none" stroke="var(--ink-soft)" stroke-width="2"></rect>
+          <line x1="17" y1="26" x2="35" y2="26" stroke="var(--line-strong)" stroke-width="2" stroke-dasharray="3 4"></line>
+          <circle cx="26" cy="26" r="7" fill="var(--danger-bg)" stroke="var(--danger)" stroke-width="2"></circle>
+          <circle cx="26" cy="26" r="2.2" fill="var(--danger)"></circle>
+        </svg>
+        <div class="min0">
+          <div class="case-id">CASO-001 · ATAQUE AL CANAL</div>
+          <h3 class="case-title">El impostor en medio de la conversación</h3>
+        </div>
+        <span class="case-tag">Rompe: tu privacidad</span>
+      </div>
+      <div class="case-body">
+        <div class="case-what min0">
+          <p>Dos personas creen que están hablando directamente — tú y tu banco, tú y una página web — pero
+            alguien se coló en medio y escucha todo. A veces no solo escucha: también cambia lo que cada uno dice
+            antes de que llegue al otro.</p>
+          <div class="quote">Es como si alguien se metiera en medio de una llamada, escuchara cada palabra y,
+            además, pudiera editar la frase antes de que llegue al otro lado — sin que ninguno de los dos note la
+            diferencia en la voz.</div>
+        </div>
+        <div class="case-aside min0">
+          <h4>Señales de alarma</h4>
+          <ul>
+            <li>Te conectas a un wifi público abierto, sin contraseña.</li>
+            <li>Una página que siempre tiene el candado de seguridad hoy no lo tiene.</li>
+            <li>Un mensaje te pide "confirmar datos" con mucha urgencia.</li>
+          </ul>
+          <h4 class="fix-h">Cómo te proteges</h4>
+          <ul>
+            <li>Evita trámites importantes en wifi público.</li>
+            <li>Revisa el candado y la dirección exacta antes de escribir datos sensibles.</li>
+            <li>Si algo exige prisa, detente y verifica por otro canal.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · CASO 2 — DoS -->
+  <section class="slide" data-slide>
+    <div class="slide-inner gutter">
+      <span class="kicker">Parte 1 · Tres casos</span>
+      <div class="case-top">
+        <svg class="case-icon" viewBox="0 0 52 52" aria-hidden="true">
+          <circle cx="9" cy="16" r="3" fill="var(--danger)"></circle>
+          <circle cx="16" cy="10" r="3" fill="var(--danger)"></circle>
+          <circle cx="16" cy="22" r="3" fill="var(--danger)"></circle>
+          <circle cx="23" cy="16" r="3" fill="var(--danger)"></circle>
+          <line x1="30" y1="6" x2="30" y2="46" stroke="var(--ink-soft)" stroke-width="2.4"></line>
+          <circle cx="42" cy="26" r="4" fill="none" stroke="var(--ink-faint)" stroke-width="2"></circle>
+        </svg>
+        <div class="min0">
+          <div class="case-id">CASO-002 · ATAQUE AL ACCESO</div>
+          <h3 class="case-title">La puerta bloqueada a propósito</h3>
+        </div>
+        <span class="case-tag">Rompe: el acceso</span>
+      </div>
+      <div class="case-body">
+        <div class="case-what min0">
+          <p>Un servicio deja de responder porque alguien lo satura con muchísimas peticiones al mismo tiempo, más
+            de las que puede atender. No roban nada ni leen nada: solo lo dejan inútil para todos.</p>
+          <div class="quote">Es como bloquear la única puerta de una tienda llenándola de gente que no va a
+            comprar, hasta que los clientes reales ya no pueden entrar.</div>
+        </div>
+        <div class="case-aside min0">
+          <h4>Señales de alarma</h4>
+          <ul>
+            <li>Un servicio que siempre funciona bien, de golpe se vuelve lentísimo o deja de cargar.</li>
+            <li>No es solo tu conexión: le pasa a todo el mundo a la vez.</li>
+            <li>Suele coincidir con momentos clave (lanzamientos, eventos importantes).</li>
+          </ul>
+          <h4 class="fix-h">Cómo te proteges</h4>
+          <ul>
+            <li>Mantén tus dispositivos actualizados: uno infectado puede usarse para saturar a otros sin que lo
+              sepas.</li>
+            <li>Quien administra un servicio debe filtrar tráfico sospechoso antes de que llegue.</li>
+            <li>Como usuario: paciencia. No es un robo de tu cuenta, es una puerta bloqueada temporalmente.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 · CASO 3 — Día cero -->
+  <section class="slide" data-slide>
+    <div class="slide-inner gutter">
+      <span class="kicker">Parte 1 · Tres casos</span>
+      <div class="case-top">
+        <svg class="case-icon" viewBox="0 0 52 52" aria-hidden="true">
+          <path d="M26 6 L42 13 V27 C42 37 35 43 26 46 C17 43 10 37 10 27 V13 Z"
+                fill="none" stroke="var(--ink-soft)" stroke-width="2"></path>
+          <path d="M34 20 L37 17" stroke="var(--danger)" stroke-width="2" stroke-linecap="round"></path>
+          <circle cx="37" cy="17" r="3.4" fill="none" stroke="var(--danger)" stroke-width="2" stroke-dasharray="2 3"></circle>
+        </svg>
+        <div class="min0">
+          <div class="case-id">CASO-003 · ATAQUE A LO DESCONOCIDO</div>
+          <h3 class="case-title">La falla que nadie sabía que existía</h3>
+        </div>
+        <span class="case-tag">Rompe: la confianza en el software</span>
+      </div>
+      <div class="case-body">
+        <div class="case-what min0">
+          <p>Todo software tiene errores. Cuando alguien descubre uno que permite entrar o hacer daño antes de que
+            el propio fabricante lo sepa, tiene un "día cero": el fabricante ha tenido cero días para arreglarlo,
+            porque se entera al mismo tiempo que todos los demás.</p>
+          <div class="quote">Es como comprar una puerta que crees perfectamente segura, con un defecto de fábrica
+            invisible que ni el carpintero conocía — y alguien lo descubre antes que todos.</div>
+        </div>
+        <div class="case-aside min0">
+          <h4>Señales de alarma</h4>
+          <ul>
+            <li>Casi nunca hay ninguna señal visible: por eso son tan peligrosos.</li>
+            <li>Te enteras cuando el fabricante lanza una actualización "urgente de seguridad".</li>
+            <li>Primero se usan contra objetivos específicos, antes de hacerse públicos.</li>
+          </ul>
+          <h4 class="fix-h">Cómo te proteges</h4>
+          <ul>
+            <li>Instala las actualizaciones de seguridad lo antes posible: a veces cierran una puerta que ya
+              estaba en uso.</li>
+            <li>No puedes evitarlo solo, pero sí reducir el daño: copias de seguridad, contraseñas distintas por
+              servicio.</li>
+            <li>Las empresas serias premian a quien reporta estas fallas en vez de usarlas.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · DIVISOR PARTE 2 -->
+  <section class="slide divider" data-slide>
+    <div class="slide-inner gutter">
+      <span class="bignum">Parte 2 · 7 minutos</span>
+      <h2>Esconder un mensaje a simple vista</h2>
+      <p>La criptografía no guarda el mensaje en un lugar secreto: lo transforma en algo que parece basura, con
+        una regla y una llave que solo quien debe leerlo conoce.</p>
+      <hr>
+    </div>
+  </section>
+
+  <!-- 7 · CRIPTO: HISTORIA -->
+  <section class="slide" data-slide>
+    <div class="slide-inner gutter">
+      <span class="kicker">Criptografía · Parte 2</span>
+      <h2 style="font-size:clamp(1.4rem,1.1rem + 1.2vw,1.9rem);margin-top:4px;">Una idea con 2000 años de historia</h2>
+      <div class="timeline-crypto">
+        <div class="tc-row">
+          <div class="tc-when">Hace +2000 años<br>Roma</div>
+          <div class="tc-what">
+            <b>El cifrado de César</b>
+            <p>Julio César movía cada letra de su mensaje un número fijo de posiciones en el alfabeto. Quien
+              interceptaba la carta veía solo letras sin sentido.</p>
+          </div>
+        </div>
+        <div class="tc-row">
+          <div class="tc-when">Siglo XX<br>Segunda Guerra</div>
+          <div class="tc-what">
+            <b>La máquina Enigma</b>
+            <p>Los alemanes usaron una máquina que cambiaba la regla de cifrado en cada letra. Un equipo de
+              matemáticos —entre ellos Alan Turing— logró romperlo, y acortó la guerra.</p>
+          </div>
+        </div>
+        <div class="tc-row">
+          <div class="tc-when">Hoy</div>
+          <div class="tc-what">
+            <b>El secreto ya no es el método</b>
+            <p>El método de cifrado es público; cualquiera puede estudiarlo. Lo único que se protege es la
+              <b>llave</b>: sin ella, conocer el método no sirve de nada.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 · CRIPTO: PRINCIPIO -->
+  <section class="slide" data-slide>
+    <div class="slide-inner gutter">
+      <span class="kicker">Criptografía · Parte 2</span>
+      <h2 style="font-size:clamp(1.4rem,1.1rem + 1.2vw,1.9rem);margin-top:4px;margin-bottom:18px;">La regla de oro</h2>
+      <div class="principle">
+        <svg viewBox="0 0 34 34" aria-hidden="true">
+          <rect x="8" y="15" width="18" height="13" rx="2.5" fill="none" stroke="var(--cyan)" stroke-width="2"></rect>
+          <path d="M12 15 V10 a5 5 0 0 1 10 0 V15" fill="none" stroke="var(--cyan)" stroke-width="2"></path>
+          <circle cx="17" cy="21" r="1.8" fill="var(--cyan)"></circle>
+        </svg>
+        <p><b>No cifres pensando en esconder cómo lo hiciste.</b> Cifra pensando en proteger tu llave — esa es la
+          única parte que debe seguir siendo un secreto.</p>
+      </div>
+      <div class="flow" role="img" aria-label="Mensaje más llave, a través del método de cifrado, da el mensaje cifrado; el mismo proceso al revés lo recupera">
+        <span class="box">mensaje</span><span class="op">+</span><span class="box">llave</span>
+        <span class="op">→ método →</span><span class="box">mensaje cifrado</span>
+        <span class="op">··· → método inverso →</span><span class="box">mensaje original</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 · DIVISOR PARTE 3 -->
+  <section class="slide divider" data-slide>
+    <div class="slide-inner gutter">
+      <span class="bignum">Parte 3 · 15 minutos</span>
+      <h2>Reto: descifra el mensaje</h2>
+      <p>Trabaja en grupos de 2 o 3. Vas a ver dos mensajes cifrados con métodos distintos. Cuando creas tener la
+        respuesta, escríbela para comprobarla: la página solo te dice si es correcta, no te la muestra.</p>
+      <div class="playrule">
+        <b>Cómo se juega:</b> en los dos retos el mensaje original está en español, en MAYÚSCULAS y sin tildes.
+        Al escribir tu respuesta para comprobar, no importa si usas mayúsculas/minúsculas ni los espacios.
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 · CANDADO -->
+  <section class="slide lockslide" data-slide>
+    <div class="slide-inner gutter">
+      <svg viewBox="0 0 34 34" aria-hidden="true">
+        <rect x="9" y="15" width="16" height="12" rx="2.5" fill="none" stroke="var(--amber)" stroke-width="2"></rect>
+        <path d="M12 15 V11 a5 5 0 0 1 10 0 V15" fill="none" stroke="var(--amber)" stroke-width="2"></path>
+        <circle cx="17" cy="21" r="1.8" fill="var(--amber)"></circle>
+      </svg>
+      <h2>Sección bloqueada</h2>
+      <p>Tu profesor la desbloqueará cuando sea el momento de trabajar los retos.</p>
+      <div class="lock-row">
+        <input type="password" id="retos-pass" placeholder="•••" maxlength="12" inputmode="numeric" aria-label="Contraseña para desbloquear los retos">
+        <button class="btn primary" id="retos-unlock" type="button">Desbloquear</button>
+      </div>
+      <div class="lock-feedback" id="retos-lock-feedback"></div>
+    </div>
+  </section>
+
+  <!-- 11 · RETO A — César -->
+  <section class="slide" data-slide>
+    <div class="slide-inner gutter">
+      <div class="reto-top">
+        <div class="min0">
+          <div class="reto-id">CASO-A001</div>
+          <h3 class="reto-title">El mensaje de César</h3>
+        </div>
+        <span class="reto-method">Cifrado por desplazamiento</span>
+      </div>
+
+      <div class="ciphertext">CLYPMPJH HUALZ KL JVUMPHY</div>
+
+      <div class="hintbox">
+        <div class="hint-line"><span class="flag">cómo funciona</span>
+          <span>Cada letra del mensaje original se corrió siempre el mismo número de posiciones hacia adelante
+            en el alfabeto. Por ejemplo, con un desplazamiento de 3: la A se convierte en D, la B en E... y
+            <span class="mono">HOLA</span> se convierte en <span class="mono">KROD</span>.</span>
+        </div>
+        <div class="hint-line"><span class="flag">pista</span>
+          <span>El alfabeto tiene 26 letras: como máximo hay 25 desplazamientos posibles. Prueba con la
+            herramienta de abajo.</span>
+        </div>
+      </div>
+
+      <details class="tool">
+        <summary>Herramienta: probar desplazamientos</summary>
+        <div class="tool-body">
+          <div class="tool-row">
+            <label for="r-shift">Desplazamiento a probar</label>
+            <input type="range" id="r-shift" min="0" max="25" value="0" step="1">
+            <span class="shiftval" id="r-shift-val">0</span>
+          </div>
+          <div class="live-out" id="r-shift-out" aria-live="polite"></div>
+        </div>
+      </details>
+
+      <div class="answer">
+        <div class="answer-row">
+          <input type="text" id="r-answer" placeholder="Escribe el mensaje descifrado completo" aria-label="Tu respuesta para el reto A">
+          <button class="btn primary" id="r-check" type="button">Comprobar respuesta</button>
+        </div>
+        <div class="feedback" id="r-feedback"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12 · RETO B — Vigenère -->
+  <section class="slide" data-slide>
+    <div class="slide-inner gutter">
+      <div class="reto-top">
+        <div class="min0">
+          <div class="reto-id">CASO-B002</div>
+          <h3 class="reto-title">El mensaje con clave</h3>
+        </div>
+        <span class="reto-method">Cifrado polialfabético</span>
+      </div>
+
+      <div class="ciphertext">CE FCEYV IV CE XEMFR HHWIQJE</div>
+
+      <div class="hintbox">
+        <div class="hint-line"><span class="flag">cómo funciona</span>
+          <span>Esta vez no todas las letras se mueven lo mismo: el desplazamiento depende de una
+            <b>palabra clave</b> que se repite letra por letra debajo del mensaje. Por ejemplo, con la clave
+            <span class="mono">SOL</span>: <span class="mono">HOLA</span> se convierte en
+            <span class="mono">ZCWS</span> (H+S, O+O, L+L, A+S).</span>
+        </div>
+        <div class="hint-line"><span class="flag">pista</span>
+          <span>La clave real de este mensaje tiene solo 3 letras, y tiene que ver con lo que conecta a los
+            computadores entre sí.</span>
+        </div>
+      </div>
+
+      <details class="tool">
+        <summary>Herramienta: probar una clave</summary>
+        <div class="tool-body">
+          <div class="tool-row">
+            <label for="v-key">Tu clave candidata</label>
+            <input type="text" id="v-key" placeholder="por ejemplo: SOL" maxlength="12">
+          </div>
+          <div class="live-out" id="v-out" aria-live="polite"></div>
+        </div>
+      </details>
+
+      <div class="answer">
+        <div class="answer-row">
+          <input type="text" id="v-answer" placeholder="Escribe el mensaje descifrado completo" aria-label="Tu respuesta para el reto B">
+          <button class="btn primary" id="v-check" type="button">Comprobar respuesta</button>
+        </div>
+        <div class="feedback" id="v-feedback"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13 · CIERRE / PRÁCTICA -->
+  <section class="slide" data-slide>
+    <div class="slide-inner gutter">
+      <span class="kicker">Siguiente hora · fuera de estas diapositivas</span>
+      <h2 style="font-size:clamp(1.4rem,1.1rem + 1.2vw,1.9rem);margin-top:4px;">Ahora, a la terminal</h2>
+      <p style="color:var(--ink-soft);margin-top:8px;font-size:.98rem;">Lo que viene ya no está aquí: es una
+        simulación que corre en tu propia terminal, sin instalar nada.</p>
+
+      <div class="practice">
+        <h2>Simulación del ataque MITM en una red SDN</h2>
+        <p>Verás, paso a paso, el mismo Caso 001 (el impostor en medio) ocurriendo sobre una red simulada: cómo
+          engaña a las dos víctimas, cómo intercepta y altera el tráfico, y cómo un controlador de red lo detecta
+          y lo bloquea.</p>
+        <div class="cmdbox">
+          <code id="cmd-text">python3 simulacion/simular_mitm.py</code>
+          <button class="copy-btn" id="copy-cmd" type="button">Copiar</button>
+        </div>
+        <ul class="practice-notes">
+          <li>No necesita instalar nada: solo Python 3, que ya viene en Ubuntu.</li>
+          <li>No usa <span class="mono">sudo</span> ni conexión a internet.</li>
+          <li>Pulsa Enter para avanzar de fase en fase, a tu ritmo.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="deckbar gutter">
+  <div class="deckbar-in">
+    <button class="navbtn" id="prevBtn" type="button">←<span class="lbl">&nbsp;Anterior</span></button>
+    <div class="dots" id="dots" role="tablist" aria-label="Diapositivas"></div>
+    <span class="counter" id="counter">1 / 14</span>
+    <button class="navbtn" id="nextBtn" type="button"><span class="lbl">Siguiente&nbsp;</span>→</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+  var total = slides.length;
+  var current = 0;
+
+  var lockIndex = slides.findIndex(function(s){ return s.classList.contains("lockslide"); });
+  var maxReachable = lockIndex; // se amplía a total-1 una vez desbloqueado
+
+  var dotsEl = document.getElementById("dots");
+  var counterEl = document.getElementById("counter");
+  var topKickerEl = document.getElementById("topkicker");
+  var progressFillEl = document.getElementById("progressfill");
+  var prevBtn = document.getElementById("prevBtn");
+  var nextBtn = document.getElementById("nextBtn");
+
+  var dots = [];
+  slides.forEach(function(_, i){
+    var d = document.createElement("button");
+    d.type = "button";
+    d.className = "dot";
+    d.setAttribute("role", "tab");
+    d.setAttribute("aria-label", "Ir a la diapositiva " + (i + 1));
+    d.addEventListener("click", function(){ goTo(i); });
+    dotsEl.appendChild(d);
+    dots.push(d);
+  });
+
+  function labelFor(i){
+    var kEl = slides[i].querySelector(".kicker, .bignum, .eyebrow, .agenda-kicker");
+    return kEl ? kEl.textContent.trim() : "";
+  }
+
+  function render(){
+    slides.forEach(function(s, i){ s.hidden = (i !== current); });
+    dots.forEach(function(d, i){
+      d.classList.toggle("active", i === current);
+      d.classList.toggle("locked", i > maxReachable);
+    });
+    counterEl.textContent = (current + 1) + " / " + total;
+    topKickerEl.textContent = labelFor(current);
+    progressFillEl.style.width = (((current + 1) / total) * 100) + "%";
+    prevBtn.disabled = (current === 0);
+    nextBtn.disabled = (current === total - 1 && current >= maxReachable);
+  }
+
+  function goTo(i){
+    if (i < 0 || i >= total) return;
+    if (i > maxReachable){
+      // destino bloqueado: llevar al candado y avisar
+      current = lockIndex;
+      render();
+      var pass = document.getElementById("retos-pass");
+      if (pass) pass.focus();
+      return;
+    }
+    current = i;
+    render();
+  }
+
+  function next(){
+    if (current >= total - 1) return;
+    if (current === lockIndex && maxReachable <= lockIndex){
+      var pass = document.getElementById("retos-pass");
+      var fb = document.getElementById("retos-lock-feedback");
+      if (fb){ fb.className = "lock-feedback bad"; fb.textContent = "Ingresa la contraseña para continuar."; }
+      if (pass) pass.focus();
+      return;
+    }
+    goTo(current + 1);
+  }
+  function prev(){ goTo(current - 1); }
+
+  prevBtn.addEventListener("click", prev);
+  nextBtn.addEventListener("click", next);
+
+  document.addEventListener("keydown", function(e){
+    var tag = (document.activeElement && document.activeElement.tagName) || "";
+    if (tag === "INPUT" || tag === "TEXTAREA") return;
+    if (e.key === "ArrowRight"){ next(); }
+    else if (e.key === "ArrowLeft"){ prev(); }
+  });
+
+  /* deslizar (táctil) */
+  var touchStartX = null;
+  var deckEl = document.getElementById("deck");
+  deckEl.addEventListener("touchstart", function(e){
+    if (e.touches && e.touches.length === 1) touchStartX = e.touches[0].clientX;
+  }, {passive:true});
+  deckEl.addEventListener("touchend", function(e){
+    if (touchStartX === null) return;
+    var endX = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX : touchStartX;
+    var dx = endX - touchStartX;
+    touchStartX = null;
+    if (Math.abs(dx) < 50) return;
+    if (dx < 0) next(); else prev();
+  }, {passive:true});
+
+  /* ---------- cifrado / descifrado César ---------- */
+  var CIPHER_A = "CLYPMPJH HUALZ KL JVUMPHY";
+  function caesarDecode(text, shift){
+    var A = "A".charCodeAt(0);
+    var out = "";
+    for (var i = 0; i < text.length; i++){
+      var ch = text.charAt(i);
+      if (/[A-Z]/.test(ch)){
+        var code = ((ch.charCodeAt(0) - A - shift) % 26 + 26) % 26;
+        out += String.fromCharCode(code + A);
+      } else {
+        out += ch;
+      }
+    }
+    return out;
+  }
+  var shiftSlider = document.getElementById("r-shift");
+  var shiftVal = document.getElementById("r-shift-val");
+  var shiftOut = document.getElementById("r-shift-out");
+  function updateShift(){
+    var n = parseInt(shiftSlider.value, 10);
+    shiftVal.textContent = String(n);
+    shiftOut.textContent = caesarDecode(CIPHER_A, n);
+  }
+  if (shiftSlider){
+    shiftSlider.addEventListener("input", updateShift);
+    updateShift();
+  }
+
+  /* ---------- cifrado / descifrado Vigenère ---------- */
+  var CIPHER_B = "CE FCEYV IV CE XEMFR HHWIQJE";
+  function vigenereDecode(text, key){
+    key = (key || "").toUpperCase().replace(/[^A-Z]/g, "");
+    if (!key.length) return "";
+    var A = "A".charCodeAt(0);
+    var out = "";
+    var ki = 0;
+    for (var i = 0; i < text.length; i++){
+      var ch = text.charAt(i);
+      if (/[A-Z]/.test(ch)){
+        var k = key.charCodeAt(ki % key.length) - A;
+        var code = ((ch.charCodeAt(0) - A - k) % 26 + 26) % 26;
+        out += String.fromCharCode(code + A);
+        ki++;
+      } else {
+        out += ch;
+      }
+    }
+    return out;
+  }
+  var vKey = document.getElementById("v-key");
+  var vOut = document.getElementById("v-out");
+  function updateVigenere(){
+    var key = vKey.value.trim();
+    vOut.textContent = key ? vigenereDecode(CIPHER_B, key) : "Escribe una clave arriba para ver el resultado.";
+  }
+  if (vKey){
+    vKey.addEventListener("input", updateVigenere);
+    updateVigenere();
+  }
+
+  /* ---------- comprobación de respuestas (hash, sin revelar la solución) ---------- */
+  var HASH_A = "807b5ea8473229fca5b73f7e40d96c2cda47f705c929f5da30dc4f85cec046d2";
+  var HASH_B = "af95e4c355534514de647a6dd84d67ef601bcfb63ded7f41f7408d9ecdae1aab";
+
+  function normalize(s){ return (s || "").toUpperCase().replace(/[^A-Z]/g, ""); }
+
+  function toHex(buffer){
+    var bytes = new Uint8Array(buffer);
+    var hex = "";
+    for (var i = 0; i < bytes.length; i++){
+      hex += bytes[i].toString(16).padStart(2, "0");
+    }
+    return hex;
+  }
+
+  function showFeedback(el, kind, text){
+    el.className = "feedback show " + kind;
+    el.textContent = text;
+  }
+
+  function checkAnswer(inputEl, feedbackEl, targetHash){
+    var value = normalize(inputEl.value);
+    if (!value){
+      showFeedback(feedbackEl, "bad", "Escribe primero tu respuesta.");
+      return;
+    }
+    if (!(window.crypto && window.crypto.subtle && window.crypto.subtle.digest)){
+      showFeedback(feedbackEl, "wait", "Este navegador no puede verificar la respuesta automáticamente. Pídele a tu profesor que la confirme.");
+      return;
+    }
+    var data = new TextEncoder().encode(value);
+    window.crypto.subtle.digest("SHA-256", data).then(function(buf){
+      var hex = toHex(buf);
+      if (hex === targetHash){
+        showFeedback(feedbackEl, "ok", "¡Correcto! Ese es el mensaje original.");
+      } else {
+        showFeedback(feedbackEl, "bad", "Todavía no. Revisa letra por letra e inténtalo otra vez.");
+      }
+    }).catch(function(){
+      showFeedback(feedbackEl, "wait", "No se pudo verificar en este navegador. Pídele a tu profesor que la confirme.");
+    });
+  }
+
+  var rAnswer = document.getElementById("r-answer");
+  var rFeedback = document.getElementById("r-feedback");
+  var rCheck = document.getElementById("r-check");
+  if (rCheck){
+    rCheck.addEventListener("click", function(){ checkAnswer(rAnswer, rFeedback, HASH_A); });
+    rAnswer.addEventListener("keydown", function(e){ if (e.key === "Enter") rCheck.click(); });
+  }
+
+  var vAnswer = document.getElementById("v-answer");
+  var vFeedback = document.getElementById("v-feedback");
+  var vCheck = document.getElementById("v-check");
+  if (vCheck){
+    vCheck.addEventListener("click", function(){ checkAnswer(vAnswer, vFeedback, HASH_B); });
+    vAnswer.addEventListener("keydown", function(e){ if (e.key === "Enter") vCheck.click(); });
+  }
+
+  /* ---------- copiar comando de la práctica ---------- */
+  var copyBtn = document.getElementById("copy-cmd");
+  var cmdText = document.getElementById("cmd-text");
+  if (copyBtn){
+    copyBtn.addEventListener("click", function(){
+      var text = cmdText.textContent;
+      function done(){ copyBtn.textContent = "¡Copiado!"; setTimeout(function(){ copyBtn.textContent = "Copiar"; }, 1600); }
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done).catch(function(){
+          var range = document.createRange();
+          range.selectNode(cmdText);
+          window.getSelection().removeAllRanges();
+          window.getSelection().addRange(range);
+          done();
+        });
+      }
+    });
+  }
+
+  /* ---------- candado de los retos ---------- */
+  var RETOS_PASS = "123";
+  var retosPass = document.getElementById("retos-pass");
+  var retosUnlockBtn = document.getElementById("retos-unlock");
+  var retosLockFeedback = document.getElementById("retos-lock-feedback");
+
+  (function initLock(){
+    var yaDesbloqueado = false;
+    try { yaDesbloqueado = localStorage.getItem("retos-unlocked") === "1"; } catch (e) {}
+    if (yaDesbloqueado) maxReachable = total - 1;
+  })();
+
+  function tryUnlock(){
+    var val = (retosPass.value || "").trim();
+    if (val === RETOS_PASS){
+      maxReachable = total - 1;
+      try { localStorage.setItem("retos-unlocked", "1"); } catch (e) {}
+      retosLockFeedback.className = "lock-feedback ok";
+      retosLockFeedback.textContent = "¡Desbloqueado!";
+      goTo(lockIndex + 1);
+    } else {
+      retosLockFeedback.className = "lock-feedback bad";
+      retosLockFeedback.textContent = "Contraseña incorrecta. Pregúntale a tu profesor.";
+      retosPass.value = "";
+      retosPass.focus();
+    }
+  }
+  if (retosUnlockBtn){
+    retosUnlockBtn.addEventListener("click", tryUnlock);
+    retosPass.addEventListener("keydown", function(e){ if (e.key === "Enter") tryUnlock(); });
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
